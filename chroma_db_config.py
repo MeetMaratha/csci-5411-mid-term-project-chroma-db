@@ -1,22 +1,61 @@
+from pathlib import Path
 from pprint import pprint
+from typing import Any, Dict, List
+from uuid import uuid4
 
-import chromadb
+from chromadb import ClientAPI, Collection, PersistentClient, QueryResult
+from flask import Flask, Response, json, make_response, request
+from flask_cors import CORS
+
+app: Flask = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
+CHROMA_DB_PATH: Path = Path(".", "ChromaDB")
+COLLECTION_NAME: str = "zig_documentation"
+chroma_client: ClientAPI = PersistentClient(path=str(CHROMA_DB_PATH))
+
+
+@app.route("/store_data", methods=["POST"])
+def storeData() -> Response:
+
+    request_data = request.json
+
+    chunks: List[str] = request_data["chunks"]
+
+    assert type(chunks) == list, f"Invalid request data sent of type {type(chunks)}"
+
+    collection: Collection = chroma_client.get_or_create_collection(
+        name=COLLECTION_NAME
+    )
+    ids: List[str] = [str(uuid4()) for _ in range(len(chunks))]
+    collection.add(documents=chunks, ids=ids)
+
+    return make_response(json.dumps({"response": "Data added to the database"}), 200)
+
+
+@app.route("/get_relevant_vectors", methods=["POST"])
+def getRelevantVectors() -> Response:
+
+    request_data = request.json
+
+    query_sentence: str = request_data["query"]
+    number_of_relevant_documents: int = int(
+        request_data["number_of_relevant_documents"]
+    )
+
+    collection = chroma_client.get_or_create_collection(name=COLLECTION_NAME)
+
+    documents: QueryResult = collection.query(
+        query_texts=[query_sentence], n_results=number_of_relevant_documents
+    )
+
+    result: Dict[Any, Any] = dict(documents=dict())
+    for id, document, metadata in zip(
+        documents["ids"][0], documents["documents"][0], documents["metadatas"][0]
+    ):
+        result["documents"][id] = {"document": document, "metadata": metadata}
+
+    return make_response(json.dumps(result), 200)
+
 
 if __name__ == "__main__":
-    chroma_client = chromadb.Client()
-
-    collection = chroma_client.get_or_create_collection(name="zig_documentations")
-
-    collection.add(
-        documents=[
-            "This is a document about pineapple",
-            "This is a document about oranges",
-        ],
-        ids=["id1", "id2"],
-    )
-
-    results = collection.query(
-        query_texts=["This is a query document about hawaii."], n_results=1
-    )
-
-    pprint(results)
+    app.run(host="0.0.0.0", port=8000)
