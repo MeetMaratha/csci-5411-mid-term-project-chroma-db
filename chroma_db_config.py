@@ -1,9 +1,7 @@
 from pathlib import Path
-from pprint import pprint
-from typing import Any, Dict, List
-from uuid import uuid4
+from typing import Any, Dict
 
-from chromadb import ClientAPI, Collection, PersistentClient, QueryResult
+from chromadb import ClientAPI, PersistentClient, QueryResult
 from flask import Flask, Response, json, make_response, request
 from flask_cors import CORS
 
@@ -12,24 +10,6 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 CHROMA_DB_PATH: Path = Path(".", "ChromaDB")
 COLLECTION_NAME: str = "zig_documentation"
 chroma_client: ClientAPI = PersistentClient(path=str(CHROMA_DB_PATH))
-
-
-@app.route("/store_data", methods=["POST"])
-def storeData() -> Response:
-
-    request_data = request.json
-
-    chunks: List[str] = request_data["chunks"]
-
-    assert type(chunks) == list, f"Invalid request data sent of type {type(chunks)}"
-
-    collection: Collection = chroma_client.get_or_create_collection(
-        name=COLLECTION_NAME
-    )
-    ids: List[str] = [str(uuid4()) for _ in range(len(chunks))]
-    collection.add(documents=chunks, ids=ids)
-
-    return make_response(json.dumps({"response": "Data added to the database"}), 200)
 
 
 @app.route("/get_relevant_vectors", methods=["POST"])
