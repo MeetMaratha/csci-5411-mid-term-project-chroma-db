@@ -39,6 +39,9 @@ if __name__ == "__main__":
             if "Messages" in response:
                 for message in response["Messages"]:
                     processMessage(collection=collection, message=message)
+                    sqs_client.delete_message(
+                        QueueUrl=QUERY_URL, ReceiptHandle=message["ReceiptHandle"]
+                    )
         except Exception as e:
             print(f"ERROR: Error occured!!")
             print(e)
