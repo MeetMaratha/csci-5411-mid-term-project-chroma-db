@@ -8,9 +8,7 @@ from chromadb import ClientAPI, Collection, PersistentClient
 
 CHROMA_DB_PATH: str = os.path.join(".", "ChromaDB")
 COLLECTION_NAME: str = "zig_documentation"
-QUERY_URL: str = (
-    "https://sqs.us-east-1.amazonaws.com/655352584827/chunker-database-queue"
-)
+QUERY_URL: str = "http://localhost:9324/000000000000/chunker-queue"
 
 
 def processMessage(collection: Collection, message: Dict) -> None:
